@@ -1,7 +1,7 @@
 from src.pipeline.feature_pipeline import create_features
 from src.pipeline.backfill_pipelinie import merge_historical_data
 from src.new_features.feature_engineering import engineering_features
-from src.storage.hopsworks import store_features
+from src.storage.hopsworks_storage import store_on_hopsworks
 
 def main():
     features = create_features()
@@ -15,11 +15,7 @@ def main():
     print("\nHistorical Dataset")
     print(f"Total Records: {len(history_df)}")
 
-    print("\nFirst 5 Records:")
-    print(history_df.head())
-
-    store_features()
-
+    store_on_hopsworks(history_df)
 
 if __name__ == "__main__":
     main()
