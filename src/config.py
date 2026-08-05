@@ -4,7 +4,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 api_key = os.getenv("OPENWEATHER_API_KEY")
+
 hopsworks_api_key = os.getenv("HOPSWORKS_API_KEY")
+hopsworks_project = os.getenv("HOPSWORKS_PROJECT")
 
 weather_data_url = "https://api.openweathermap.org/data/2.5/weather"
 air_data_url = "https://api.openweathermap.org/data/2.5/air_pollution"
