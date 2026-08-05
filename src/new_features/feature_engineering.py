@@ -13,7 +13,7 @@ def engineering_features(df):
     df["aqi_change_rate"] = df["aqi"].pct_change()
 
     df["aqi_moving_average"] = df["aqi"].rolling(window=3).mean()
-    df["rollinng_temperature_average"] = df["temperature_2m"].rolling(window=3).mean()
+    df["rolling_temperature_average"] = df["temperature_2m"].rolling(window=3).mean()
 
     df["temperature_difference"] = df["temperature_2m"].diff()
     df["humidity_difference"] = df["relative_humidity_2m"].diff()
