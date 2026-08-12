@@ -1,7 +1,7 @@
-import hopsworks
-from src.config import hopsworks_api_key, hopsworks_project
-
 def store_on_hopsworks(df):
+    import hopsworks
+    from src.config import hopsworks_api_key, hopsworks_project
+
     project = hopsworks.login(
         project = hopsworks_project,
         api_key_value = hopsworks_api_key
