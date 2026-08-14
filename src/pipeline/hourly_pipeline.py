@@ -3,7 +3,7 @@ import os
 from src.pipeline.feature_pipeline import create_features
 from src.storage.hopsworks_storage import get_previous_features
 from src.new_features.feature_engineering import engineer_hourly_features
-from src.config import enable_hopsworks
+from src.config import ENABLE_HOPSWORKS
 
 def run_hourly_pipeline():
     current_features = create_features()
@@ -12,7 +12,7 @@ def run_hourly_pipeline():
 
     current_df = pd.DataFrame([current_features])
 
-    if enable_hopsworks:
+    if ENABLE_HOPSWORKS:
         previous_df = get_previous_features()
 
         current_df = engineer_hourly_features(

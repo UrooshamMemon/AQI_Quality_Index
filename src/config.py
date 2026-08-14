@@ -7,7 +7,7 @@ api_key = os.getenv("OPENWEATHER_API_KEY")
 
 hopsworks_api_key = os.getenv("HOPSWORKS_API_KEY")
 hopsworks_project = os.getenv("HOPSWORKS_PROJECT")
-enable_hopsworks = os.getenv("ENABLE_HOPSWORKS" , "False") == True
+ENABLE_HOPSWORKS = os.getenv("ENABLE_HOPSWORKS", "False") == "True"
 
 weather_data_url = "https://api.openweathermap.org/data/2.5/weather"
 air_data_url = "https://api.openweathermap.org/data/2.5/air_pollution"
