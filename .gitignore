@@ -20,4 +20,4 @@ __pycache__/
 Thumbs.db
 
 #local Data
-storage/previous_features.csv
+data/previous_features.csv
