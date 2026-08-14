@@ -20,6 +20,57 @@ def run_hourly_pipeline():
             previous_df
         )
 
+        current_df["rolling_temperature_average"] = current_df.pop(
+            "rolling_temperature_average"
+        )
+
+        float_columns = [
+            "temperature_2m",
+            "surface_pressure",
+            "wind_speed_10m",
+            "pm10",
+            "pm2_5",
+            "carbon_monoxide",
+            "nitrogen_dioxide",
+            "sulphur_dioxide",
+            "ozone",
+            "aqi_difference",
+            "aqi_change_rate",
+            "aqi_moving_average",
+            "rollinng_temperature_average",
+            "temperature_difference",
+            "humidity_difference"
+        ]
+
+        current_df[float_columns] = current_df[float_columns].astype(float)
+
+        columns = [
+            "time",
+            "temperature_2m",
+            "relative_humidity_2m",
+            "surface_pressure",
+            "wind_speed_10m",
+            "aqi",
+            "pm10",
+            "pm2_5",
+            "carbon_monoxide",
+            "nitrogen_dioxide",
+            "sulphur_dioxide",
+            "ozone",
+            "hour",
+            "day",
+            "month",
+            "weekday",
+            "aqi_difference",
+            "aqi_change_rate",
+            "aqi_moving_average",
+            "rollinng_temperature_average",
+            "temperature_difference",
+            "humidity_difference"
+        ]
+
+        current_df = current_df[columns]
+
     else:
         print("Hopsworks disabled. Running on local server")
 
