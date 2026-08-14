@@ -1,3 +1,0 @@
-weather,aqi,pm10,pm2.5,co,no,no2,o3,so2,nh3,temperature_2m,relative_humidity_2m,surface_pressure,wind_speed_10m,time,hour,day,month,weekday,aqi_difference,aqi_change_rate,aqi_moving_average,rolling_temperature_average,temperature_difference,humidity_difference
-Clouds,3,82.89,19.98,68.51,0.01,0.06,46.88,0.43,0,29.34,74,1003,8.44,2026-08-14 10:25:30.498690,,,,,,,,,,
-Clouds,3,82.89,19.98,68.51,0.01,0.06,46.88,0.43,0,29.34,74,1003,8.44,2026-08-14 10:26:01.013944,10.0,14.0,8.0,4.0,0.0,0.0,3.0,29.34,0.0,0.0
