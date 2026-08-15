@@ -20,7 +20,7 @@ def run_hourly_pipeline():
             previous_df
         )
 
-        current_df["rolling_temperature_average"] = current_df.pop(
+        current_df["rollinng_temperature_average"] = current_df.pop(
             "rolling_temperature_average"
         )
 
@@ -37,7 +37,7 @@ def run_hourly_pipeline():
             "aqi_difference",
             "aqi_change_rate",
             "aqi_moving_average",
-            "rolling_temperature_average",
+            "rollinng_temperature_average",
             "temperature_difference",
             "humidity_difference"
         ]
@@ -64,7 +64,7 @@ def run_hourly_pipeline():
             "aqi_difference",
             "aqi_change_rate",
             "aqi_moving_average",
-            "rolling_temperature_average",
+            "rollinng_temperature_average",
             "temperature_difference",
             "humidity_difference"
         ]
