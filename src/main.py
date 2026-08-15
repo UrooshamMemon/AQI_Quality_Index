@@ -7,9 +7,11 @@ def main():
     current_df = run_hourly_pipeline()
 
     print("\nCurrent Hourly Features:")
-    print(current_df)
+    print(current_df)   
     
     if ENABLE_HOPSWORKS:
+        print("\nFINAL COLUMNS:")
+        print(current_df.columns.tolist()) 
         store_on_hopsworks(current_df)
     else:
         save_local_features(current_df)
