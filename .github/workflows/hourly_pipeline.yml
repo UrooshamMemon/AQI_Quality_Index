@@ -31,14 +31,39 @@ jobs:
 
       - name: Check environment
         run: |
-          python --version
-          pip show hopsworks
-          pip show deltalake
-          pip show pyarrow
+            python --version
+            pip show hopsworks
+            pip show deltalake
+            pip show pyarrow
 
       - name: Test Hopsworks connection
         run: |
-          python -c "import hopsworks; from src.config import hopsworks_api_key, hopsworks_project; p=hopsworks.login(project=hopsworks_project, api_key_value=hopsworks_api_key); fs=p.get_feature_store(); fg=fs.get_feature_group('historical_aqi_features', version=1); print('Feature Group:', fg.name); print('Version:', fg.version); print('Time Travel:', fg.time_travel_format); print(fg.select_all().read().tail(2))"
+          python -c "
+          import hopsworks
+          from src.config import hopsworks_api_key, hopsworks_project
+
+          print('Connecting to Hopsworks...')
+          p = hopsworks.login(
+              project=hopsworks_project,
+              api_key_value=hopsworks_api_key
+          )
+
+          print('Login successful')
+
+          fs = p.get_feature_store()
+          print('Feature Store accessed')
+
+          fg = fs.get_feature_group(
+              'historical_aqi_features',
+              version=1
+          )
+
+          print('Feature Group:', fg.name)
+          print('Version:', fg.version)
+          print('Time Travel:', fg.time_travel_format)
+
+          print('Connection test PASSED')
+          "
 
       - name: Run hourly pipeline
         run: |
