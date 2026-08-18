@@ -65,6 +65,6 @@ jobs:
           print('Connection test PASSED')
           "
 
-      # - name: Run hourly pipeline
-      #   run: |
-      #     python -m src.main
+      - name: Run hourly pipeline
+        run: |
+          python -m src.main
