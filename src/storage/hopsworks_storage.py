@@ -19,10 +19,7 @@ def store_on_hopsworks(df):
 
     feature_group.insert(
         df,
-        wait=True,
-        write_options={
-            "start_offline_materialization": False
-        }
+        wait=True
     )
 
     print("Successfully uploaded to Hopsworks!")
