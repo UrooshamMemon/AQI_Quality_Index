@@ -31,4 +31,4 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run feature pipeline
-        run: python -m src.mains
+        run: python -m src.main
