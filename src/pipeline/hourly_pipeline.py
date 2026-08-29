@@ -37,7 +37,7 @@ def run_hourly_pipeline():
             "aqi_difference",
             "aqi_change_rate",
             "aqi_moving_average",
-            "rollinng_temperature_average",
+            "rolling_temperature_average",
             "temperature_difference",
             "humidity_difference"
         ]
