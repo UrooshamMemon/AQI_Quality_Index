@@ -12,10 +12,6 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from xgboost import XGBRegressor
 
 
-# ============================================================
-# LOAD FEATURES FROM HOPSWORKS
-# ============================================================
-
 def load_features():
 
     project = hopsworks.login(
@@ -44,10 +40,6 @@ def load_features():
     return df
 
 
-# ============================================================
-# CREATE FUTURE AQI TARGETS
-# ============================================================
-
 def create_targets(df):
 
     df["time"] = pd.to_datetime(df["time"])
@@ -59,7 +51,6 @@ def create_targets(df):
     df["time_48h"] = df["time"] + pd.Timedelta(hours=48)
     df["time_72h"] = df["time"] + pd.Timedelta(hours=72)
 
-    # 24-hour target
     df = df.merge(
         aqi_lookup.rename(
             columns={
@@ -71,7 +62,6 @@ def create_targets(df):
         how="left"
     )
 
-    # 48-hour target
     df = df.merge(
         aqi_lookup.rename(
             columns={
@@ -83,7 +73,6 @@ def create_targets(df):
         how="left"
     )
 
-    # 72-hour target
     df = df.merge(
         aqi_lookup.rename(
             columns={
@@ -95,7 +84,6 @@ def create_targets(df):
         how="left"
     )
 
-    # Remove rows where future AQI is unavailable
     df = df.dropna(
         subset=[
             "aqi_24h",
@@ -104,7 +92,6 @@ def create_targets(df):
         ]
     )
 
-    # Remove temporary columns
     df = df.drop(
         columns=[
             "time_24h",
@@ -115,10 +102,6 @@ def create_targets(df):
 
     return df
 
-
-# ============================================================
-# PREPARE TRAINING DATA
-# ============================================================
 
 def prepare_data(df):
 
@@ -152,10 +135,6 @@ def prepare_data(df):
     return X, y
 
 
-# ============================================================
-# TRAIN / TEST SPLIT
-# ============================================================
-
 def split_data(X, y):
 
     split_index = int(len(X) * 0.8)
@@ -185,10 +164,6 @@ def split_data(X, y):
 
     return X_train, X_test, y_train, y_test
 
-
-# ============================================================
-# MODEL EVALUATION
-# ============================================================
 
 def evaluate_model(
     model,
@@ -223,10 +198,6 @@ def evaluate_model(
 
     return mae, rmse, r2
 
-
-# ============================================================
-# TRAIN 24-HOUR XGBOOST MODEL
-# ============================================================
 
 def train_24h_model(
     X_train,
@@ -267,9 +238,6 @@ def train_24h_model(
     return model, mae, rmse, r2
 
 
-# ============================================================
-# TRAIN 48-HOUR RIDGE MODEL
-# ============================================================
 
 def train_48h_model(
     X_train,
@@ -303,10 +271,6 @@ def train_48h_model(
     return model, mae, rmse, r2
 
 
-# ============================================================
-# TRAIN 72-HOUR RIDGE MODEL
-# ============================================================
-
 def train_72h_model(
     X_train,
     X_test,
@@ -338,10 +302,6 @@ def train_72h_model(
 
     return model, mae, rmse, r2
 
-
-# ============================================================
-# REGISTER MODEL IN HOPSWORKS
-# ============================================================
 
 def register_model(
     model,
@@ -398,10 +358,6 @@ def register_model(
     return hopsworks_model
 
 
-# ============================================================
-# MAIN
-# ============================================================
-
 if __name__ == "__main__":
 
     print(
@@ -414,10 +370,6 @@ if __name__ == "__main__":
         "=============================================="
     )
 
-    # --------------------------------------------------------
-    # LOAD DATA
-    # --------------------------------------------------------
-
     print("\nLoading data from Hopsworks...")
 
     df = load_features()
@@ -427,10 +379,6 @@ if __name__ == "__main__":
         len(df)
     )
 
-    # --------------------------------------------------------
-    # CREATE TARGETS
-    # --------------------------------------------------------
-
     df = create_targets(df)
 
     print(
@@ -438,24 +386,12 @@ if __name__ == "__main__":
         len(df)
     )
 
-    # --------------------------------------------------------
-    # PREPARE DATA
-    # --------------------------------------------------------
-
     X, y = prepare_data(df)
-
-    # --------------------------------------------------------
-    # TRAIN / TEST SPLIT
-    # --------------------------------------------------------
 
     X_train, X_test, y_train, y_test = split_data(
         X,
         y
     )
-
-    # --------------------------------------------------------
-    # TRAIN SELECTED MODELS
-    # --------------------------------------------------------
 
     model_24h, mae_24h, rmse_24h, r2_24h = train_24h_model(
         X_train,
@@ -477,10 +413,6 @@ if __name__ == "__main__":
         y_train,
         y_test
     )
-
-    # --------------------------------------------------------
-    # FINAL MODEL SUMMARY
-    # --------------------------------------------------------
 
     print("\n")
     print(
@@ -526,10 +458,6 @@ if __name__ == "__main__":
         f"{rmse_72h:<10.2f}"
         f"{r2_72h:<10.4f}"
     )
-
-    # --------------------------------------------------------
-    # REGISTER MODELS
-    # --------------------------------------------------------
 
     print("\n")
     print(
