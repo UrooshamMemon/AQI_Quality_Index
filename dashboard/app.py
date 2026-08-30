@@ -8,16 +8,10 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-# ---------------------------------------------------------------------------
-# Make the project root importable (dashboard/ -> project_root/)
-# ---------------------------------------------------------------------------
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-# ---------------------------------------------------------------------------
-# Page configuration (must be the first Streamlit call)
-# ---------------------------------------------------------------------------
 st.set_page_config(
     page_title="AQI Forecast Dashboard",
     page_icon="🌫️",
@@ -25,15 +19,9 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
 FEATURE_GROUP_NAME = "historical_aqi_features"
 FEATURE_GROUP_VERSION = 1
 
-# "display_name" is used by the Model Performance table so the model's
-# human-friendly algorithm name lives in one place (here) instead of being
-# duplicated in a separate lookup dict elsewhere in the file.
 MODEL_REGISTRY = {
     "24h": {"name": "aqi_forecast_24h", "version": 1, "label": "24-Hour Forecast", "display_name": "XGBoost"},
     "48h": {"name": "aqi_forecast_48h", "version": 1, "label": "48-Hour Forecast", "display_name": "Ridge Regression"},
@@ -65,13 +53,8 @@ AQI_CATEGORIES = [
     (301, 500, "Hazardous", "#7e0023"),
 ]
 
-CACHE_TTL_SECONDS = 600  # 10 minutes — avoids hammering Hopsworks on every rerun
+CACHE_TTL_SECONDS = 600  
 
-# ---------------------------------------------------------------------------
-# SHAP explainability constants — must match the verified standalone script
-# (dashboard/explainability.py) exactly: same feature group/version, same
-# model/version, and the same exact training feature order.
-# ---------------------------------------------------------------------------
 SHAP_FEATURE_COLUMNS = [
     "temperature_2m",
     "relative_humidity_2m",
@@ -98,10 +81,6 @@ SHAP_FEATURE_COLUMNS = [
 
 SHAP_BACKGROUND_SAMPLE_SIZE = 300
 
-
-# ---------------------------------------------------------------------------
-# AQI helpers
-# ---------------------------------------------------------------------------
 def get_aqi_category(aqi_value):
     """Return (label, color) for a given AQI value using EPA-style breakpoints."""
     if aqi_value is None or pd.isna(aqi_value):
@@ -126,11 +105,6 @@ def find_column(df, candidates):
     return None
 
 
-# ---------------------------------------------------------------------------
-# ADAPTER — EDIT THIS SECTION if your src/prediction/predict.py exposes
-# differently-named functions. Everything else in this file calls the
-# wrapper functions defined here, so this is the only place to change.
-# ---------------------------------------------------------------------------
 _predict_module = None
 try:
     from src.prediction import predict as _predict_module  # noqa: E402
@@ -154,11 +128,6 @@ def _hopsworks_login():
 
 
 def _try_reuse_predict_module():
-    """
-    Look for common function names in src/prediction/predict.py so we don't
-    duplicate pipeline logic. Returns a dict of callables that were found
-    (missing ones simply fall back to the direct-Hopsworks path below).
-    """
     found = {}
     if _predict_module is None:
         return found
@@ -186,9 +155,6 @@ def _try_reuse_predict_module():
 _REUSED = _try_reuse_predict_module()
 
 
-# ---------------------------------------------------------------------------
-# Cached data / resource loaders
-# ---------------------------------------------------------------------------
 @st.cache_resource(show_spinner=False)
 def get_fs_project():
     """Cached Hopsworks project handle (resource — not serialized)."""
@@ -197,16 +163,7 @@ def get_fs_project():
 
 @st.cache_data(ttl=CACHE_TTL_SECONDS, show_spinner="Loading latest feature data from Hopsworks...")
 def load_feature_data():
-    """
-    Load recent rows from the `historical_aqi_features` feature group.
-    Tries to reuse a helper from predict.py first; falls back to a direct
-    Hopsworks Feature Store read using the same feature group name/version.
 
-    This is the SINGLE source of feature data for the whole app — the
-    forecast cards, historical chart, pollutant panel, the EDA & Trends
-    section, and the Prediction Explainability section all reuse this same
-    cached DataFrame instead of issuing additional Hopsworks reads.
-    """
     if "features" in _REUSED:
         df = _REUSED["features"]()
         if isinstance(df, pd.DataFrame):
@@ -224,7 +181,6 @@ def load_feature_data():
         }
     )
 
-    # Normalize a timestamp column if one exists, sort ascending
     ts_col = find_column(df, ["timestamp", "datetime", "date", "event_time", "time"])
     if ts_col:
         df[ts_col] = pd.to_datetime(df[ts_col])
@@ -235,15 +191,7 @@ def load_feature_data():
 
 @st.cache_resource(show_spinner="Loading registered models from Hopsworks Model Registry...")
 def load_models():
-    """
-    Load the three registered forecasting models. Tries to reuse a helper
-    from predict.py first; falls back to the Hopsworks Model Registry API.
 
-    In the fallback path, each bundle keeps the raw `meta` object returned
-    by mr.get_model() (in addition to the downloaded `dir`), so downstream
-    consumers — like the Model Performance section — can read registry
-    metadata (e.g. stored training metrics) without another registry call.
-    """
     if "models" in _REUSED:
         result = _REUSED["models"]()
         if result:
@@ -262,13 +210,7 @@ def load_models():
 
 @st.cache_data(ttl=CACHE_TTL_SECONDS, show_spinner="Generating forecasts...")
 def get_predictions():
-    """
-    Get all AQI predictions from the verified src/prediction/predict.py
-    implementation.
 
-    The dashboard does not perform its own fallback prediction, so the
-    predictions shown here always use the same logic as predict.py.
-    """
     if "predict" not in _REUSED:
         raise RuntimeError(
             "Could not import the prediction function from "
@@ -286,7 +228,6 @@ def get_predictions():
 
 
 def refresh_all():
-    """Clear all caches so the next render pulls fresh data from Hopsworks."""
     load_feature_data.clear()
     load_models.clear()
     get_predictions.clear()
@@ -295,16 +236,6 @@ def refresh_all():
     get_model_performance_table.clear()
 
 
-# ---------------------------------------------------------------------------
-# SHAP explainability — data/compute layer
-#
-# This section intentionally does NOT touch src/prediction/predict.py, the
-# training pipeline, or the feature pipeline. It reuses:
-#   - the already-loaded feature DataFrame from load_feature_data()
-#   - the already-cached model bundle from load_models() (same Hopsworks
-#     Model Registry download used for the 24h forecast card)
-# so no extra Hopsworks connections or Feature Store reads happen here.
-# ---------------------------------------------------------------------------
 def _load_24h_model_object():
     """
     Return the loaded aqi_forecast_24h model object, reusing the bundle
@@ -341,28 +272,6 @@ def _load_24h_model_object():
 
 @st.cache_data(ttl=CACHE_TTL_SECONDS, show_spinner="Computing SHAP explainability...")
 def compute_shap_explanation(df):
-    """
-    Compute SHAP-based explainability for the aqi_forecast_24h model, reusing
-    the already-loaded feature DataFrame (`df`, passed in from
-    load_feature_data()) and the existing model-loading logic. No additional
-    Hopsworks Feature Store reads or Hopsworks connections are made here.
-
-    Mirrors the verified standalone script (dashboard/explainability.py):
-    same feature order, same ~300-row background sample, same median fill
-    for missing values, and shap.TreeExplainer.
-
-    Returns a plain-data dict (safe for st.cache_data's hashing/serialization
-    — we never try to cache SHAP Explanation objects or the model itself):
-        {
-            "global_importance": {feature: mean_abs_shap, ...},
-            "individual_contributions": {feature: shap_value, ...},
-            "predicted_24h_aqi": float,
-            "current_aqi": float or None,
-        }
-
-    Raises on any failure so the caller can show a friendly warning instead
-    of crashing the rest of the dashboard.
-    """
     import shap  # local import: a missing/broken shap install only affects this section
 
     missing = [c for c in SHAP_FEATURE_COLUMNS if c not in df.columns]
@@ -401,25 +310,8 @@ def compute_shap_explanation(df):
     }
 
 
-# ---------------------------------------------------------------------------
-# Model Performance — data layer
-#
-# Reads the mae/rmse/r2 metrics that the training pipeline already stores on
-# each registered model (via mr.sklearn.create_model(..., metrics=metrics))
-# directly from the Hopsworks Model Registry. Nothing is hard-coded or
-# recomputed here. Wherever load_models() already carries the registry
-# metadata object (the same one used for forecasting/SHAP), that is reused
-# instead of making another Model Registry call; a direct lookup only
-# happens as a fallback, and it reuses the cached get_fs_project() Hopsworks
-# connection rather than opening a new one.
-# ---------------------------------------------------------------------------
 def _get_model_registry_metadata(horizon, info):
-    """
-    Return the Hopsworks Model Registry metadata object for a given horizon.
-    Prefers the `meta` object already present in the bundle returned by
-    load_models(); falls back to a direct mr.get_model() lookup (still via
-    the cached Hopsworks project) only if that isn't available.
-    """
+
     models = load_models()
     bundle = models.get(horizon)
 
@@ -437,31 +329,7 @@ def _get_model_registry_metadata(horizon, info):
 
 @st.cache_data(ttl=CACHE_TTL_SECONDS, show_spinner="Loading model performance metrics...")
 def get_model_performance_table():
-    """
-    Build the Model Performance table from the training-time metrics stored
-    on each registered model in the Hopsworks Model Registry.
 
-    Iterates MODEL_REGISTRY (the single source of model names/versions/
-    display names) rather than duplicating that mapping elsewhere. Designed
-    to keep working if MODEL_REGISTRY's versions are bumped in the future —
-    it always reads whatever version is currently configured there.
-
-    Returns a list of plain-data row dicts, one per horizon:
-        {
-            "horizon": "24h",
-            "model_name": "aqi_forecast_24h",
-            "display_name": "XGBoost",
-            "version": 1,
-            "mae": float or None,
-            "rmse": float or None,
-            "r2": float or None,
-            "error": str or None,   # set (and other fields left None) if
-                                     # metrics could not be retrieved
-        }
-    A failure for one model never raises — it's captured in that row's
-    "error" field so the rest of the table (and the rest of the dashboard)
-    still renders.
-    """
     rows = []
     for horizon, info in MODEL_REGISTRY.items():
         row = {
@@ -498,11 +366,7 @@ def get_model_performance_table():
     return rows
 
 
-# ---------------------------------------------------------------------------
-# UI — Sidebar
-# ---------------------------------------------------------------------------
 def render_epa_scale():
-    # EPA AQI scale legend, shown in the sidebar.
     st.markdown("**EPA AQI Scale**")
     for low, high, label, color in AQI_CATEGORIES:
         st.markdown(
@@ -547,9 +411,6 @@ def render_sidebar():
             st.rerun()
 
 
-# ---------------------------------------------------------------------------
-# UI — Main sections (existing — unchanged behavior)
-# ---------------------------------------------------------------------------
 def render_header():
     st.title("AQI Forecast Dashboard - Karachi")
     st.caption("Air Quality Index forecasting — 24h / 48h / 72h ahead, powered by Hopsworks Feature Store & Model Registry")
@@ -605,26 +466,7 @@ def render_metric_cards(predictions):
             )
 
 
-# ---------------------------------------------------------------------------
-# UI — AQI Health Alert (existing — unchanged behavior)
-#
-# Reuses the existing get_aqi_category() / AQI_CATEGORIES classification —
-# no new/duplicate AQI thresholds are introduced here. Evaluates the current
-# AQI plus the 24h/48h/72h forecasts already computed by get_predictions()
-# and surfaces a warning for any horizon at "Unhealthy for Sensitive Groups"
-# (AQI 101) or above. Purely presentational: makes no Hopsworks calls of its
-# own and does not touch predictions, the feature DataFrame, or SHAP results.
-# ---------------------------------------------------------------------------
 def render_aqi_alerts(predictions):
-    """
-    Render the AQI Health Alert section.
-
-    Evaluates Current AQI, 24h, 48h, and 72h forecasts (safely skipping any
-    that are None/NaN) using the existing get_aqi_category() classification.
-    Shows one alert card per horizon at AQI >= 101 ("Unhealthy for Sensitive
-    Groups" or worse), or a single positive message if every available
-    horizon is Good/Moderate (or if no predictions are available at all).
-    """
     st.subheader("⚠️ AQI Health Alert")
 
     horizons = [
@@ -634,8 +476,6 @@ def render_aqi_alerts(predictions):
         ("72-hour forecast", predictions.get("72h") if predictions else None),
     ]
 
-    # Alert copy per category — layered on top of the existing
-    # get_aqi_category() labels/colors, not a new classification system.
     ALERT_COPY = {
         "Unhealthy for Sensitive Groups": {
             "icon": "⚠️",
@@ -794,15 +634,6 @@ def render_timestamp(df):
     else:
         st.caption("Latest feature data timestamp unavailable.")
 
-
-# ---------------------------------------------------------------------------
-# UI — EDA & Trends (existing — unchanged behavior)
-#
-# Everything here reuses the single `df` DataFrame already loaded by
-# load_feature_data() in main() — no additional Hopsworks connections or
-# Feature Store reads are made. Charts use Plotly with the same dark theme
-# and color palette as the rest of the dashboard for visual consistency.
-# ---------------------------------------------------------------------------
 def render_eda_trend(df, ts_col, aqi_col):
     if ts_col is None:
         st.info("AQI trend chart unavailable — no timestamp column detected.")
@@ -1066,17 +897,7 @@ def render_eda_section(df):
         render_eda_correlation(df, aqi_col)
 
 
-# ---------------------------------------------------------------------------
-# UI — Prediction Explainability (existing — unchanged behavior)
-#
-# Reuses the `df` DataFrame already loaded by load_feature_data() in main()
-# and the model bundle already produced by load_models() — no additional
-# Hopsworks Feature Store reads or Model Registry downloads happen here.
-# SHAP computation is wrapped in compute_shap_explanation(), which is
-# st.cache_data-cached (same TTL as the rest of the app) so it is not
-# recomputed on every UI interaction, and any failure is caught here and
-# shown as a friendly warning instead of crashing the dashboard.
-# ---------------------------------------------------------------------------
+
 def render_explainability_section(df):
     st.subheader("Prediction Explainability")
     st.write(
@@ -1103,7 +924,6 @@ def render_explainability_section(df):
     top_feature = max(individual_contributions, key=lambda k: abs(individual_contributions[k]))
     top_feature_shap = individual_contributions[top_feature]
 
-    # --- Summary metrics -----------------------------------------------
     cols = st.columns(4)
     metric_pairs = [
         ("Current AQI", f"{current_aqi:.0f}" if current_aqi is not None else "—"),
@@ -1119,7 +939,6 @@ def render_explainability_section(df):
 
     left, right = st.columns(2)
 
-    # --- Global feature importance (top 10, mean |SHAP value|) ---------
     with left:
         global_series = pd.Series(global_importance).sort_values(ascending=False).head(10)
         fig = go.Figure()
@@ -1140,7 +959,6 @@ def render_explainability_section(df):
         )
         st.plotly_chart(fig, use_container_width=True)
 
-    # --- Top 10 contributors to the latest 24h prediction (diverging) --
     with right:
         individual_series = pd.Series(individual_contributions)
         top10_idx = individual_series.abs().sort_values(ascending=False).head(10).index
@@ -1166,7 +984,6 @@ def render_explainability_section(df):
         )
         st.plotly_chart(fig, use_container_width=True)
 
-    # --- Interpretation ---------------------------------------------------
     direction = "higher" if top_feature_shap > 0 else "lower"
     st.caption(
         f"**{top_feature}** is currently the strongest contributor to the 24-hour AQI prediction, "
@@ -1174,15 +991,6 @@ def render_explainability_section(df):
     )
 
 
-# ---------------------------------------------------------------------------
-# UI — Model Performance (new)
-#
-# Purely presentational: reads the plain-data rows produced by
-# get_model_performance_table() (which itself reuses load_models()/
-# get_fs_project() — no new Hopsworks connections here) and renders them as
-# a table. Any model whose metrics couldn't be retrieved shows
-# "Metrics unavailable" in that row instead of breaking the section.
-# ---------------------------------------------------------------------------
 def render_model_performance_section():
     st.subheader("Model Performance")
 
@@ -1228,9 +1036,6 @@ def render_model_performance_section():
                     st.code(f"{row['horizon']} ({row['model_name']}): {row['error']}")
 
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
 def main():
     render_sidebar()
     render_header()
@@ -1258,7 +1063,7 @@ def main():
     render_metric_cards(predictions)
     st.write("")
 
-    render_aqi_alerts(predictions)  # reuses get_aqi_category()/AQI_CATEGORIES, no new Hopsworks calls
+    render_aqi_alerts(predictions)  
     st.write("")
 
     left, right = st.columns(2)
@@ -1271,13 +1076,13 @@ def main():
     render_pollutants(df)
 
     st.divider()
-    render_eda_section(df)  # reuses the same `df` loaded above — no extra Hopsworks calls
+    render_eda_section(df)  
 
     st.divider()
-    render_explainability_section(df)  # reuses the same `df` and cached model bundle — no extra Hopsworks calls
+    render_explainability_section(df)  
 
     st.divider()
-    render_model_performance_section()  # reuses the cached model bundle/registry metadata — no extra Hopsworks calls
+    render_model_performance_section()  
 
 
 if __name__ == "__main__":
