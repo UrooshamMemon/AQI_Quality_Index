@@ -1045,9 +1045,9 @@ def main():
         predictions = get_predictions()
     except Exception as e:
         st.error(
-            "❌ Could not connect to Hopsworks or load data/models. "
-            "Check your Hopsworks API key / project configuration in `src/config.py` "
-            "and your network connection."
+            "Unable to load AQI data or models from Hopsworks. "
+            "This may be due to a temporary Hopsworks Feature Query Service or connection issue. "
+            "Please try refreshing the dashboard."
         )
         with st.expander("Show technical details"):
             st.code("".join(traceback.format_exception(type(e), e, e.__traceback__)))
