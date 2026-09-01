@@ -4,6 +4,9 @@ An end-to-end **Air Quality Index (AQI) forecasting system** developed during my
 
 The system predicts AQI for the next **24, 48, and 72 hours**.
 
+## Project Report
+[View Full Project Report (PDF)](AQI_Forecasting_Report.pdf)
+
 ---
 
 ## Project Overview
