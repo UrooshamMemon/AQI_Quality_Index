@@ -1049,6 +1049,9 @@ def main():
             "This may be due to a temporary Hopsworks Feature Query Service or connection issue. "
             "Please try refreshing the dashboard."
         )
+        if st.button("Refresh Data", use_container_width=True):
+            refresh_all()
+            st.rerun()
         with st.expander("Show technical details"):
             st.code("".join(traceback.format_exception(type(e), e, e.__traceback__)))
         st.stop()
